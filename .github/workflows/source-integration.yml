@@ -1,0 +1,107 @@
+name: TextEdit source integration
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  managed-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: m-textedit-web
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: massimilianonardi-ai/m-js-textedit
+          ref: c84c806332e9180e6546e43e987c7e033da45304
+          path: m-js-textedit
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: massimilianonardi-ai/m-js-textedit-gui
+          ref: e473d84b13e08108ce95267d5ea562c930bc450b
+          path: m-js-textedit-gui
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: massimilianonardi-ai/m-os
+          ref: 359469c59633f90c5f81e7825712544a15467c37
+          path: m-os
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: massimilianonardi-ai/pkg-catalog
+          ref: eacaa2ac25f1b7a983269e1af2b96bf3c921b4cf
+          path: pkg-catalog
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: massimilianonardi-ai/m-mk
+          ref: 9475f8a1785772532becd4f877f243c26ab1a2a6
+          path: m-mk
+          persist-credentials: false
+      - name: Bootstrap isolated managed toolchain
+        shell: sh
+        run: |
+          set -eu
+          m="$GITHUB_WORKSPACE/m-os/m"
+          "$m" osarch update
+          conf=$("$m" state-path system sys pkg conf)
+          mkdir -p "$conf"
+          printf '%s\n' "$GITHUB_WORKSPACE/pkg-catalog" > "$conf/catalog"
+          "$m" pkg install mk jsc
+          "$m" mk --project "$GITHUB_WORKSPACE/m-js-textedit" --goals
+          "$m" node --version
+      - name: Test-only Chromium setup
+        working-directory: m-textedit-web
+        shell: sh
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Test engine, GUI and web with managed mk and jsc
+        shell: sh
+        run: |
+          set -eu
+          m="$GITHUB_WORKSPACE/m-os/m"
+          "$m" mk --project "$GITHUB_WORKSPACE/m-js-textedit" test
+          "$m" mk --project "$GITHUB_WORKSPACE/m-js-textedit-gui" test
+          "$m" mk --project "$GITHUB_WORKSPACE/m-textedit-web" --plan run
+          "$m" mk --project "$GITHUB_WORKSPACE/m-textedit-web" build
+          "$m" mk --project "$GITHUB_WORKSPACE/m-textedit-web" test
+      - name: Exercise current mk source against the same managed environment
+        shell: sh
+        run: |
+          set -eu
+          m="$GITHUB_WORKSPACE/m-os/m"
+          "$m" node "$GITHUB_WORKSPACE/m-mk/bin/mk" --project "$GITHUB_WORKSPACE/m-textedit-web" --plan run
+          "$m" node "$GITHUB_WORKSPACE/m-mk/bin/mk" --project "$GITHUB_WORKSPACE/m-textedit-web" test-http
+      - name: Exercise actual mk run
+        shell: sh
+        run: |
+          set -eu
+          m="$GITHUB_WORKSPACE/m-os/m"
+          "$m" mk --project "$GITHUB_WORKSPACE/m-textedit-web" run > server.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || :' EXIT
+          i=0
+          while [ "$i" -lt 30 ]
+          do
+            if curl -fsS http://127.0.0.1:8765/ > page.html
+            then
+              grep -F 'GUI su Document2D canonico' page.html
+              curl -fsS http://127.0.0.1:8765/assets/textedit.js > served-engine.js
+              cmp served-engine.js "$GITHUB_WORKSPACE/m-js-textedit/build/textedit.js"
+              exit 0
+            fi
+            sleep 1
+            i=$((i+1))
+          done
+          cat server.log
+          exit 1

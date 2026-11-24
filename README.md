@@ -18,3 +18,5 @@ Open http://127.0.0.1:8765/ (`TEXTEDIT_PORT` overrides port). `mk build` builds 
 The same `bin/server.cjs <engine-asset-dir> <gui-asset-dir> [port]` works for installed assets once the pkg library resolution contract is established. No production fallback to sibling repositories is permitted. Initial pkg release and installation are pending.
 
 See [architecture](docs/architecture.md), [tests](docs/tests.md), [execution plan](docs/execution-plan.md).
+
+A pinned [source integration workflow](.github/workflows/source-integration.yml) runs the managed toolchain and real browser tests in a disposable hosted checkout. Installed TextEdit packages are a separate acceptance gate.
