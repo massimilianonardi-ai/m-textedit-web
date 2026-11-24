@@ -1,0 +1,3 @@
+# Runtime boundary
+
+Browser receives the actual `m-js-textedit` JSC bundle and `m-js-textedit-gui` bundle/page/start assets, in that order. The server takes two explicit asset roots; fixed URL allowlist prevents arbitrary path serving. All bytes are read at startup, no-store response headers prevent stale browser cache, and a local source rebuild does not change an already-running server. In development, mk builds the sibling projects. In production, a future pkg launcher must resolve selected installed package roots; no source fallback or hidden embedded copy. No m-js-core dependency in steps 1–2. The initial PoC editor operates on its fixtures in-browser; server-side document storage is deliberately out of this first slice.

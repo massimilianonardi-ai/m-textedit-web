@@ -1,0 +1,110 @@
+{
+  "version": 2,
+  "goals": {
+    "build": [
+      "check"
+    ],
+    "run": [
+      "start"
+    ],
+    "test": [
+      "verify"
+    ],
+    "test-http": [
+      "verify-http"
+    ]
+  },
+  "dependencies": {
+    "engine": {
+      "project": "../m-js-textedit",
+      "goals": {
+        "build": [
+          "build"
+        ],
+        "run": [
+          "build"
+        ],
+        "test": [
+          "build"
+        ],
+        "test-http": [
+          "build"
+        ]
+      }
+    },
+    "gui": {
+      "project": "../m-js-textedit-gui",
+      "goals": {
+        "build": [
+          "build"
+        ],
+        "run": [
+          "build"
+        ],
+        "test": [
+          "build"
+        ],
+        "test-http": [
+          "build"
+        ]
+      }
+    }
+  },
+  "operations": {
+    "check": {
+      "action": {
+        "type": "process",
+        "command": "node",
+        "args": [
+          "bin/server.cjs",
+          "../m-js-textedit/build",
+          "../m-js-textedit-gui/build",
+          "--check"
+        ]
+      }
+    },
+    "start": {
+      "prerequisites": [
+        "check"
+      ],
+      "action": {
+        "type": "process",
+        "command": "node",
+        "args": [
+          "bin/server.cjs",
+          "../m-js-textedit/build",
+          "../m-js-textedit-gui/build"
+        ]
+      }
+    },
+    "verify": {
+      "prerequisites": [
+        "check"
+      ],
+      "action": {
+        "type": "process",
+        "command": "node",
+        "args": [
+          "tests/run.cjs",
+          "../m-js-textedit/build",
+          "../m-js-textedit-gui/build"
+        ]
+      }
+    },
+    "verify-http": {
+      "prerequisites": [
+        "check"
+      ],
+      "action": {
+        "type": "process",
+        "command": "node",
+        "args": [
+          "tests/run.cjs",
+          "../m-js-textedit/build",
+          "../m-js-textedit-gui/build",
+          "--http-only"
+        ]
+      }
+    }
+  }
+}
